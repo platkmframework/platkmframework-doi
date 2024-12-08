@@ -2,91 +2,71 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.platkmframework</groupId>
   <artifactId>platkmframework-doi</artifactId>
-  <version>1.0.0-beta</version>
- <build> 
-    <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
-        <configuration>
-          <release>20</release>
-        </configuration>
-      </plugin>
-	  <plugin>
-		    <groupId>org.apache.maven.plugins</groupId>
-		    <artifactId>maven-javadoc-plugin</artifactId>
-		    <version>3.5.0</version>
-		    <executions>
-		      <execution>
-		        <id>attach-javadocs</id>
-		        <goals>
-		          <goal>jar</goal>
-		        </goals>
-				<configuration>
-				  <doclint>-html,-syntax,-accessibility,-missing</doclint>
-				  <failOnError>false</failOnError>
-				  <quiet>true</quiet>
-				</configuration>
-		      </execution>
-		    </executions>
-		  </plugin>
-    </plugins>
-  </build>
+  <version>1.0.0</version>
+ 
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+  </properties>
+  
+    <build>
+        <plugins>
+	      <plugin>
+	        <artifactId>maven-compiler-plugin</artifactId>
+	        <version>3.8.0</version>
+	        <configuration>
+	          <release>20</release>
+	        </configuration>
+	      </plugin>			
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin> 
+        </plugins>
+    </build>  
+    
+	<distributionManagement>
+		<repository>
+			<id>platkmframework</id>
+			<name>Releases</name>
+			<url>https://nexus.platkmframework.org/repository/platkmframework-releases/</url>
+		</repository>
+	 
+		<snapshotRepository>
+			<id>platkmframework</id>
+			<name>Snapshot</name>
+			<url>https://nexus.platkmframework.org/repository/platkmframework-snapshot/</url>
+		</snapshotRepository>
+	
+	</distributionManagement>
   <dependencies>
    	<dependency>
   		<groupId>org.platkmframework</groupId>
+  		<artifactId>platkmframework-proxy</artifactId>
+  		<version>1.0.0</version>
+  	</dependency>
+   	<dependency>
+  		<groupId>org.platkmframework</groupId>
   		<artifactId>platkmframework-annotation</artifactId>
-  		<version>1.0.0-beta</version>
+  		<version>1.0.0</version>
   	</dependency>
    	<dependency>
   		<groupId>org.platkmframework</groupId>
   		<artifactId>platkmframework-doi-data</artifactId>
-  		<version>1.0.0-beta</version>
+  		<version>1.0.0</version>
   	</dependency>
-	<dependency>
-	    <groupId>javax.persistence</groupId>
-	    <artifactId>javax.persistence-api</artifactId>
-	    <version>2.2</version>
-	</dependency> 
    	<dependency>
   		<groupId>org.platkmframework</groupId>
   		<artifactId>platkmframework-util</artifactId>
-  		<version>1.0.0-beta</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.apache.commons</groupId>
-  		<artifactId>commons-lang3</artifactId>
-  		<version>3.9</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>commons-codec</groupId>
-  		<artifactId>commons-codec</artifactId>
-  		<version>1.13</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.apache.commons</groupId>
-  		<artifactId>commons-collections4</artifactId>
-  		<version>4.4</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>commons-beanutils</groupId>
-  		<artifactId>commons-beanutils</artifactId>
-  		<version>1.9.4</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.apache.commons</groupId>
-  		<artifactId>commons-digester3</artifactId>
-  		<version>3.2</version>
-  	</dependency>
-	<dependency>
-	    <groupId>commons-io</groupId>
-	    <artifactId>commons-io</artifactId>
-	    <version>2.13.0</version>
-	</dependency> 
-  	<dependency>
-  		<groupId>commons-validator</groupId>
-  		<artifactId>commons-validator</artifactId>
-  		<version>1.6</version>
+  		<version>1.0.0</version>
   	</dependency>
   </dependencies>
 </project>

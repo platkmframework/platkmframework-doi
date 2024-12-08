@@ -20,6 +20,8 @@ package org.platkmframework.doi;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -32,10 +34,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import javax.persistence.Entity;
 
 import org.apache.commons.lang3.StringUtils;
 import org.platkmframework.annotation.Api;
@@ -48,16 +49,12 @@ import org.platkmframework.annotation.Factory;
 import org.platkmframework.annotation.Functional;
 import org.platkmframework.annotation.HttpRest;
 import org.platkmframework.annotation.JBean;
+import org.platkmframework.annotation.PropertyFileContent;
 import org.platkmframework.annotation.PropertyFileInfo;
 import org.platkmframework.annotation.Repository;
 import org.platkmframework.annotation.Service;
 import org.platkmframework.annotation.TruslyException;
 import org.platkmframework.annotation.db.DatabaseConfig;
-import org.platkmframework.annotation.db.ESearchFilter;
-import org.platkmframework.annotation.db.QSearchFilter;
-import org.platkmframework.annotation.db.SearchFilters;
-import org.platkmframework.annotation.db.SelectOption;
-import org.platkmframework.annotation.db.SelectOptions;
 import org.platkmframework.annotation.db.SystemColumnValue;
 import org.platkmframework.annotation.limit.ApplicationLimit;
 import org.platkmframework.annotation.rmi.RMIServer;
@@ -67,10 +64,13 @@ import org.platkmframework.annotation.timer.TimerFixeRateScheduler;
 import org.platkmframework.annotation.timer.TimerScheduler;
 import org.platkmframework.doi.data.ObjectReferece;
 import org.platkmframework.doi.exception.IoDCException;
+import org.platkmframework.proxy.ProxyProcesorException;
+import org.platkmframework.proxy.ProxyProcessorFactory;
 import org.platkmframework.util.Util;
 import org.platkmframework.util.error.InvocationException;
-import org.platkmframework.util.proxy.ProxyProcessorFactory;
 import org.platkmframework.util.reflection.ReflectionUtil; 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -90,10 +90,13 @@ import org.platkmframework.util.reflection.ReflectionUtil;
 public class SearchClasses implements IoDProcess
 {
 	
+	private static Logger logger = LoggerFactory.getLogger(SearchClasses.class);
+	
 	public static final String C_SERVICE_ANNNOTATION_ACTIVE = "service.annotation.active";
 
-	public SearchClasses() { 
-	}
+	public SearchClasses() {
+		super();
+ }
  
 	@Override
 	public Map<Object, List<Method>> process(String packageNames,
@@ -150,7 +153,7 @@ public class SearchClasses implements IoDProcess
 										Map<String, Object> mInterface,
 										List<Constructor<?>> listPendingClass, boolean firstCheck) throws IoDCException, InvocationException, IllegalArgumentException, IllegalAccessException 
 	{
-		System.out.println("PENDING...");
+		logger.info("PENDING...");
 		Class<?>[] parameters;
 		List<Object> listParam = new ArrayList<>();
 		List<Constructor<?>> listPendingClassSecondCheck  = new ArrayList<>();
@@ -181,8 +184,7 @@ public class SearchClasses implements IoDProcess
 				if(listParam.size() == parameters.length){
 					obj = ReflectionUtil.createInstance(constructor, listParam.toArray());
 					
-					System.out.println("PENDING... " + obj.getClass().getName() );
-					System.out.println(firstCheck);
+					logger.trace("PENDING... " + obj.getClass().getName() + " - " + firstCheck);
 					objectReferece.addObject(null, obj);
 					
 					generalProcess(obj,mField,objectReferece,mInterface);	 
@@ -228,7 +230,7 @@ public class SearchClasses implements IoDProcess
 						    		Class<?> class1 = Class.forName(className, true, Thread.currentThread().getContextClassLoader()); 
 							        _classProcess(class1, objectReferece, mField, mInterface, listPendingClass, methods); 
 						    	}catch (ClassNotFoundException e) {
-									 System.out.println(className +  " - Exception NOT FOUND");
+						    		logger.trace(className +  " - Exception NOT FOUND");
 								} 
 					    	}
 					    }
@@ -325,56 +327,55 @@ public class SearchClasses implements IoDProcess
 			
 			_processSearchOptionMapping(objectReferece, class1);
 			
-			if(!_hasCosntructorParam(class1,listPendingClass)){
-				
-				Object ob;
-				if(class1.isAnnotationPresent(HttpRest.class)) {
-					
-					ob = Proxy.newProxyInstance(
-							  this.getClass().getClassLoader(), 
-							  new Class<?>[] { class1 }, 
-							  new InvocationHandler() { 
-								@Override
-								public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-									return ProxyProcessorFactory.instance().seek(HttpRest.class.getName()).run(proxy, class1, method, args); 
-								}
-							  } 
-						);
-				}else {
-					ob = ReflectionUtil.createInstance(class1);
-				}
+			if(!_hasCosntructorParam(class1, listPendingClass)){
 				
 				if(class1.isAnnotationPresent(Api.class)) {
-					processApiKey(objectReferece, ob);
+					Object ob = ReflectionUtil.createInstance(class1);
+					_processPropertyInfo(ob, mField, objectReferece);
+					processApiKey(objectReferece, ob, mField);
 				}else {
+					Object ob;
+					if(class1.isAnnotationPresent(HttpRest.class)) {
+						
+						ob = Proxy.newProxyInstance(
+								  this.getClass().getClassLoader(), 
+								  new Class<?>[] { class1 }, 
+								  new InvocationHandler() { 
+									@Override
+									public Object invoke(Object proxy, Method method, Object[] args) throws ProxyProcesorException {
+										return ProxyProcessorFactory.instance().seek(HttpRest.class.getName()).run(proxy, class1, method, args); 
+									}
+								  } 
+							);
+					}else {
+						ob = ReflectionUtil.createInstance(class1);
+					}
+				 
 					objectReferece.addObject(null, ob); 
+					
+					generalProcess(ob, mField, objectReferece, mInterface);	 
+					_processInfoFromObjectMethod(ob, mField, objectReferece, mInterface);
+					
 				}
-				
-				generalProcess(ob,mField,objectReferece,mInterface);	 
-				_processInfoFromObjectMethod(ob, mField, objectReferece, mInterface);
 			}
 		}else{
 			
-			if(class1.isAnnotationPresent(Entity.class)) {
+		/**	if(class1.isAnnotationPresent(Entity.class)) {
 				objectReferece.getEntities().add(class1);
 			}
-			
+		*/	
 			if(class1.isAnnotationPresent(ApplicationLimit.class)) { 
 				Optional<Object> obLimit = objectReferece.getLimits().stream().filter(o -> o.getClass().getName().equals(class1.getName())).findFirst(); 
 				if(!obLimit.isPresent()) {
 					objectReferece.getLimits().add(ReflectionUtil.createInstance(class1));
 				} 
-			}
-			
-			if(class1.isAnnotationPresent(TruslyException.class)) {
+			}else if(class1.isAnnotationPresent(TruslyException.class)) {
 				objectReferece.getExceptions().add(class1.getName());
-			}
-			
-			if(class1.isAnnotationPresent(Functional.class)) {
+			}else if(class1.isAnnotationPresent(Functional.class)) {
 				objectReferece.getFunctionals().add(ReflectionUtil.createInstance(class1));
+			}else {
+				processCustomClass(objectReferece, class1);
 			}
-			
-			
 		} 
 		
 		/**if(class1.isAnnotationPresent(ApplicationConfig.class)){
@@ -382,48 +383,13 @@ public class SearchClasses implements IoDProcess
 		}*/
 	}
 	
+	protected void processCustomClass(ObjectReferece objectReferece, Class<?> class1) {}
+
+	@Deprecated
 	private void _processSearchOptionMapping(ObjectReferece objectReferece, Class<?> class1) {
 		
-		if(class1.isAnnotationPresent(SearchFilters.class)){
-			SearchFilters searchFilters = class1.getAnnotation(SearchFilters.class);
-			for (ESearchFilter eSearchFilter : searchFilters.entitySearchFilters()) {
-				objectReferece.getSearchFilter().put(eSearchFilter.code(), eSearchFilter);
-			}
-			for (QSearchFilter qSearchFilter : searchFilters.querySearchFilters()) {
-				objectReferece.getSearchFilter().put(qSearchFilter.code(), qSearchFilter);
-			}
-		}
-		
-		if(class1.isAnnotationPresent(ESearchFilter.class)) {
-			ESearchFilter eSearchFilter = class1.getAnnotation(ESearchFilter.class);
-			objectReferece.getSearchFilter().put(eSearchFilter.code(), eSearchFilter);
-		
-		}
-		
-		if(class1.isAnnotationPresent(QSearchFilter.class)) {
-			QSearchFilter qSearchFilter = class1.getAnnotation(QSearchFilter.class);
-			objectReferece.getSearchFilter().put(qSearchFilter.code(), qSearchFilter);
-		}
-		
-		if(class1.isAnnotationPresent(SelectOptions.class)) {
-			SelectOptions selectOptions = class1.getAnnotation(SelectOptions.class);
-			for (SelectOption selectOption : selectOptions.selectOption()) {
-				objectReferece.getSearchFilter().put(selectOption.code(), selectOptions);
-			}
-		}
-		
-		if(class1.isAnnotationPresent(SelectOptions.class)) {
-			
-			SelectOptions selectOptions = class1.getAnnotation(SelectOptions.class);
-			for (SelectOption selectOption : selectOptions.selectOption()) {
-				objectReferece.getSearchFilter().put(selectOption.code(), selectOption);
-			}
-		}
-		
-		if(class1.isAnnotationPresent(SelectOption.class)) {
-			SelectOption selectOption = class1.getAnnotation(SelectOption.class);
-			objectReferece.getSearchFilter().put(selectOption.code(), selectOption);
-		}
+
+
 		
 	}
 
@@ -437,7 +403,7 @@ public class SearchClasses implements IoDProcess
 					method = methods[i]; 
 					if(method.isAnnotationPresent(JBean.class)){
 						beanObj = method.invoke(ob);
-						objectReferece.addObject(method.getAnnotation(JBean.class).name(),  beanObj);
+						objectReferece.addObject(method.getAnnotation(JBean.class).name(), beanObj);
 						generalProcess(beanObj, mField, objectReferece, mInterface);
 					}
 				}
@@ -451,34 +417,42 @@ public class SearchClasses implements IoDProcess
 	private void generalProcess(Object ob, Map<Field, List<Object>> mField, ObjectReferece objectReferece, Map<String, Object> mInterface) throws IllegalArgumentException, IllegalAccessException, IoDCException, InvocationException {
 		_checkAutoWired(ob, mField, objectReferece);
 		_processPropertyInfo(ob, mField, objectReferece);
+		_processPropertyFile(ob, mField);
 		_referencesByInterface(ob, mInterface);
-		System.out.println(ob.getClass().getName());
+		logger.trace(ob.getClass().getName());
 	}
 
-	private void processApiKey(ObjectReferece objectReferece, Object ob) {
+	private void processApiKey(ObjectReferece objectReferece, Object controllerObj, Map<Field, List<Object>> mField) throws IllegalArgumentException, IllegalAccessException, IoDCException {
 		
-		Method[] methods = ob.getClass().getMethods();
+		_checkAutoWired(controllerObj, mField, objectReferece);
+		
+		Method[] methods = controllerObj.getClass().getMethods();
 		if(methods != null && methods.length > 0) {
 			Method method;
 			ClassMethod classMethod; 
-			Api api = ob.getClass().getAnnotation(Api.class);
-			String key = api.path();
-			
-			Map<String, List<Method>> mapMethod = new HashMap<>();
-			
+			Api api = controllerObj.getClass().getAnnotation(Api.class);
+			//String key = api.path();
+			String apiNameHttpMehtod; 
+			String pathVariableAPIKey;
 			for (int i = 0; i < methods.length; i++) {
 				method = methods[i];
 				if(method.isAnnotationPresent(ClassMethod.class)){
 					classMethod = method.getAnnotation(ClassMethod.class);
 					
-					if(!mapMethod.containsKey(classMethod.method().name())) {
-						mapMethod.put(classMethod.method().name(), new ArrayList<>());
+					if(StringUtils.isNotBlank(classMethod.method().name())) {
+						apiNameHttpMehtod = api.path() + classMethod.name();
+					}else {
+						apiNameHttpMehtod = api.path();
 					}
-					 
-					mapMethod.get(classMethod.method().name()).add(method);
+					if(!apiNameHttpMehtod.contains("{")) {
+						objectReferece.addApiInfo(apiNameHttpMehtod + "-" + classMethod.method().name().toLowerCase(), controllerObj, method.getName());
+					}else {
+						  pathVariableAPIKey = classMethod.method().name().toLowerCase() + "-" + apiNameHttpMehtod.split("/").length;
+						  objectReferece.addApiInfo(pathVariableAPIKey, apiNameHttpMehtod, controllerObj, method.getName());
+					}
 				}
 			}
-			objectReferece.addApiInfo(key, ob, mapMethod);  
+			  
 		}
 	}
 
@@ -611,7 +585,30 @@ public class SearchClasses implements IoDProcess
 				}	 
 			} 
 		}
+	}
+	
+	private void _processPropertyFile(Object obj, Map<Field, List<Object>> mField) throws InvocationException {
 		
+		List<Field> fields = ReflectionUtil.getAllFieldHeritage(obj.getClass());
+		PropertyFileContent propertyFileInfo; 
+		boolean accessValue;
+		Field f;
+		for (int i = 0; i < fields.size(); i++){
+			f = fields.get(i);
+			if(f.isAnnotationPresent(PropertyFileContent.class)){
+				propertyFileInfo = f.getAnnotation(PropertyFileContent.class);
+				accessValue = f.canAccess(obj);
+				f.setAccessible(true); 
+			    try {
+					f.set(obj, getPropertyFile(f, propertyFileInfo.path()));
+				} catch (IllegalArgumentException | IllegalAccessException | IOException e) {
+					e.printStackTrace(); 
+					throw new InvocationException("setting property error-> " + e.getMessage());
+				}finally {
+					f.setAccessible(accessValue); 
+				} 
+			}	 
+		} 
 	}
 	
 	
@@ -624,6 +621,15 @@ public class SearchClasses implements IoDProcess
 		 
 		return  ReflectionUtil.getRealAttributeValue(field, Util.checkingArgs(value, objectReferece.getProp()));
 		
+	}
+	
+	private Properties getPropertyFile(Field field, String propertyFilePath) throws InvocationException, IOException {
+		
+		InputStream inputStream = getClass().getClassLoader().getResourceAsStream(propertyFilePath);
+		Properties properties = new Properties();
+		properties.load(inputStream);
+		 
+		return properties;
 	}
 
 
