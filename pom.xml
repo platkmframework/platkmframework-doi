@@ -4,49 +4,97 @@
   <artifactId>platkmframework-doi</artifactId>
   <version>1.0.0</version>
  
+  	<name>org.platkmframework:platkmframework-doi</name>
+  	<description> inversion of control implementation</description>
+  	<url>https://github.com/platkmframework/platkmframework-doi</url>
+	<licenses>
+	  	<license>
+	   		<name>The Apache Software License, Version 2.0</name>
+	   		<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+	  	</license>
+	</licenses>
+	<developers>
+	  <developer>
+	   <name>Eduardo Iglesias</name>
+	   <email>eiglesias@platkmframework.org</email>
+	   <organization>PLATKMFramework</organization>
+	   <organizationUrl>https://www.platkmframework.org</organizationUrl>
+	  </developer>
+	</developers>  
+	<scm>
+	  <connection>scm:git:git://github.com/simpligility/ossrh-demo.git</connection>
+	  <developerConnection>scm:git:ssh://github.com:simpligility/ossrh-demo.git</developerConnection>
+	  <url>http://github.com/simpligility/ossrh-demo/tree/master</url>
+	</scm>  
+	
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
   </properties>
   
-    <build>
-        <plugins>
+ 	<build>
+		<plugins>
 	      <plugin>
 	        <artifactId>maven-compiler-plugin</artifactId>
 	        <version>3.8.0</version>
 	        <configuration>
 	          <release>20</release>
 	        </configuration>
-	      </plugin>			
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin> 
-        </plugins>
-    </build>  
+	      </plugin>	
+	      <plugin>
+			<!--  Deploy a "-sources.jar" along with build  -->
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-source-plugin</artifactId>
+			<version>3.3.1</version>
+			<executions>
+				<execution>
+					<id>attach-sources</id>
+					<goals>
+						<goal>jar</goal>
+					</goals>
+				</execution>
+			</executions>
+		   </plugin>
+		   <plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-javadoc-plugin</artifactId>
+			    <version>3.11.2</version>
+				<executions>
+					<execution>
+					<id>attach-javadocs</id>
+					<goals>
+					<goal>jar</goal>
+					</goals>
+					</execution>
+				</executions>
+		   </plugin>
+		   <plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-gpg-plugin</artifactId>
+			    <version>3.2.7</version>
+			    <executions>
+			        <execution>
+			            <id>sign-artifacts</id>
+			            <phase>verify</phase>
+			            <goals>
+			                <goal>sign</goal>
+			            </goals>
+			        </execution>
+			    </executions>
+			</plugin>
+			<plugin>
+		      <groupId>org.sonatype.central</groupId>
+		      <artifactId>central-publishing-maven-plugin</artifactId>
+		      <version>0.6.0</version>
+		      <extensions>true</extensions>
+		      <configuration>
+		         <publishingServerId>central</publishingServerId>
+		         <autoPublish>true</autoPublish>
+		      </configuration>
+		    </plugin>			 
+		</plugins>
+	</build>
     
-	<distributionManagement>
-		<repository>
-			<id>platkmframework</id>
-			<name>Releases</name>
-			<url>https://nexus.platkmframework.org/repository/platkmframework-releases/</url>
-		</repository>
-	 
-		<snapshotRepository>
-			<id>platkmframework</id>
-			<name>Snapshot</name>
-			<url>https://nexus.platkmframework.org/repository/platkmframework-snapshot/</url>
-		</snapshotRepository>
-	
-	</distributionManagement>
+ 
   <dependencies>
    	<dependency>
   		<groupId>org.platkmframework</groupId>
